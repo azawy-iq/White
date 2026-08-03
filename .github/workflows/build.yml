@@ -24,7 +24,7 @@ jobs:
         set -e
         mkdir -p build/Payload/WhiteStudio.app
 
-        echo "Compiling WhiteStudio sources with SwiftUI and AVKit frameworks..."
+        echo "Compiling WhiteStudio sources for iOS device..."
         xcrun -sdk iphoneos swiftc \
           -target arm64-apple-ios16.0 \
           -swift-version 5 \
@@ -40,8 +40,8 @@ jobs:
           WhiteStudio/*.swift
 
         PLIST_CONTENT='<?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
-        <plist version=\"1.0\">
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
         <dict>
             <key>CFBundleExecutable</key>
             <string>WhiteStudio</string>
@@ -70,3 +70,9 @@ jobs:
 
         chmod +x build/Payload/WhiteStudio.app/WhiteStudio
         cd build && zip -r WhiteStudio.ipa Payload
+        
+    - name: Upload IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WhiteStudio-IPA
+        path: build/WhiteStudio.ipa
