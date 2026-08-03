@@ -1,0 +1,17 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Project
+        run: |
+          swift build
+          echo "تم فحص وبناء الكود بنجاح سحابياً!"
