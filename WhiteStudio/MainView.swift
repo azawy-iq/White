@@ -9,13 +9,12 @@ struct MainView: View {
 
     var body: some View {
         ZStack {
-            // خلفية سوداء مطلقة لملء الشاشة وإلغاء أي حواف سوداء
             Color.black.ignoresSafeArea()
 
             GeometryReader { geometry in
                 VStack(spacing: 0) {
                     
-                    // شريط التنقل العلوي الزجاجي (محمي تماماً أسفل النوتش والجزيرة الديناميكية)
+                    // شريط التنقل العلوي
                     HStack {
                         Button(action: { showSettings.toggle() }) {
                             Image(systemName: "gearshape.fill")
@@ -23,7 +22,6 @@ struct MainView: View {
                                 .font(.system(size: 16))
                                 .frame(width: 38, height: 38)
                                 .background(.ultraThinMaterial, in: Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
                         }
                         .sheet(isPresented: $showSettings) {
                             SettingsView()
@@ -39,21 +37,20 @@ struct MainView: View {
                         Spacer()
 
                         Button(action: {
-                            viewModel.exportAIProject()
+                            viewModel.exportProject()
                             showExportAlert = true
                         }) {
-                            Text("AI EXPORT")
+                            Text("EXPORT")
                                 .font(.system(size: 11, weight: .bold))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
                                 .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                                 .foregroundColor(.white)
                         }
-                        .alert("التصدير الذكي", isPresented: $showExportAlert) {
+                        .alert("الحالة", isPresented: $showExportAlert) {
                             Button("موافق", role: .cancel) { }
                         } message: {
-                            Text(viewModel.exportMessage)
+                            Text(viewModel.statusMessage)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -61,54 +58,46 @@ struct MainView: View {
                     .padding(.top, geometry.safeAreaInsets.top)
                     .background(.ultraThinMaterial)
 
-                    // مساحة عرض الفيديو الأساسية (ملء الشاشة بالكامل وبدون حواف)
+                    // عرض الفيديو أو الصورة
                     ZStack {
                         if let player = viewModel.currentPlayer {
                             VideoPlayer(player: player)
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height * 0.62)
-                                .clipped()
-                                .edgesIgnoringSafeArea(.horizontal)
-                        } else if let image = viewModel.currentImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height * 0.62)
+                                .frame(width: geometry.size.width, height: geometry.size.height * 0.60)
                                 .clipped()
                         } else {
                             VStack(spacing: 12) {
-                                Image(systemName: "wand.and.stars")
+                                Image(systemName: "sparkles.tv")
                                     .font(.system(size: 50))
                                     .foregroundColor(.white.opacity(0.4))
-                                Text("اضغط (+) لإضافة مقاطع، وسيقوم الذكاء الاصطناعي بتصميم الفيديو لوحده!")
+                                Text(viewModel.statusMessage)
                                     .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.7))
+                                    .foregroundColor(.white.opacity(0.8))
                                     .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 30)
+                                    .padding(.horizontal, 20)
                             }
-                            .frame(width: geometry.size.width, height: geometry.size.height * 0.62)
+                            .frame(width: geometry.size.width, height: geometry.size.height * 0.60)
                             .background(Color(red: 0.03, green: 0.03, blue: 0.03))
                         }
                     }
                     .frame(maxHeight: .infinity)
 
-                    // شريط التايملاين والأدوات
+                    // شريط التايملاين والأدوات الحقيقية
                     VStack(spacing: 8) {
-                        // شريط المقاطع المصغرة
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                ForEach(viewModel.mediaItems.indices, id: \.self) { index in
+                                ForEach(viewModel.clips.indices, id: \.self) { index in
                                     ZStack(alignment: .topTrailing) {
                                         RoundedRectangle(cornerRadius: 8)
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 70, height: 45)
                                             .overlay(
-                                                Text("مقطع \(index + 1)")
+                                                Text("فيديو \(index + 1)")
                                                     .font(.system(size: 10, weight: .bold))
                                                     .foregroundColor(.white)
                                             )
 
-                                        Button(action: { viewModel.removeMedia(at: index) }) {
+                                        Button(action: { viewModel.removeClip(at: index) }) {
                                             Image(systemName: "xmark.circle.fill")
                                                 .foregroundColor(.red)
                                                 .font(.system(size: 14))
@@ -116,10 +105,9 @@ struct MainView: View {
                                         }
                                         .offset(x: 4, y: -4)
                                     }
-                                    .onTapGesture { viewModel.playMedia(at: index) }
                                 }
 
-                                PhotosPicker(selection: $viewModel.selectedItem, matching: .any(of: [.videos, .images])) {
+                                PhotosPicker(selection: $viewModel.selectedItem, matching: .any(of: [.videos])) {
                                     RoundedRectangle(cornerRadius: 8)
                                         .fill(.ultraThinMaterial)
                                         .frame(width: 70, height: 45)
@@ -141,13 +129,11 @@ struct MainView: View {
                         }
                         .frame(height: 50)
 
-                        // شريط الأدوات الزجاجي السفلي (مفعل بالكامل)
-                        HStack(spacing: 14) {
-                            ToolButton(icon: "scissors", label: "القص والمدة") { viewModel.activeTool = .duration }
-                            ToolButton(icon: "wand.and.rays", label: "العزل والفلتر") { viewModel.toggleIsolation() }
-                            ToolButton(icon: "textformat", label: "الخطوط والكلام") { viewModel.activeTool = .lyrics }
-                            ToolButton(icon: "waveform", label: "استخراج الصوت") { viewModel.extractAudio() }
-                            ToolButton(icon: "sparkles", label: "تصميم ذكي AI") { viewModel.aiAutoEditAndSync() }
+                        // الأدوات الحقيقية المتصلة بالمنطق
+                        HStack(spacing: 12) {
+                            ToolBtn(icon: "waveform", label: "استخراج الصوت") { viewModel.extractAudioFromVideo() }
+                            ToolBtn(icon: "wand.and.rays", label: "عزل الخلفية") { viewModel.applyBackgroundIsolation() }
+                            ToolBtn(icon: "sparkles", label: "مزامنة ذكية") { viewModel.autoGenerateLyricsAndDialect() }
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 8)
@@ -161,7 +147,7 @@ struct MainView: View {
     }
 }
 
-struct ToolButton: View {
+struct ToolBtn: View {
     let icon: String
     let label: String
     let action: () -> Void
@@ -174,7 +160,6 @@ struct ToolButton: View {
                     .foregroundColor(.white)
                     .frame(width: 38, height: 38)
                     .background(.ultraThinMaterial, in: Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 0.5))
                 Text(label)
                     .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.white.opacity(0.8))
@@ -185,15 +170,12 @@ struct ToolButton: View {
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("hdExport") var hdExport = true
-
     var body: some View {
         NavigationView {
             Form {
-                Toggle("تصدير بجودة عالية (HD)", isOn: $hdExport)
+                Text("إعدادات تطبيق White Studio الاحترافي")
             }
             .navigationTitle("الإعدادات")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("تم") { dismiss() } }
         }
     }
