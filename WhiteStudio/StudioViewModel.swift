@@ -8,8 +8,10 @@ class StudioViewModel: ObservableObject {
     @Published var videoURL: URL?
     @Published var player: AVPlayer?
     @Published var selectedItem: PhotosPickerItem?
-    @Published var statusText: "التطبيق مستعد - اختر فيديو للبدء" = "التطبيق مستعد - اختر فيديو للبدء"
+    @Published var statusText: String = "التطبيق مستعد - اختر فيديو للبدء"
     @Published var extractedAudioURL: URL?
+
+    init() {}
 
     func loadVideo(from item: PhotosPickerItem?) async {
         guard let item = item else { return }
@@ -25,7 +27,6 @@ class StudioViewModel: ObservableObject {
         }
     }
 
-    // وظيفة حقيقية لاستخراج الصوت من الفيديو
     func extractAudio() {
         guard let sourceURL = videoURL else {
             statusText = "الرجاء اختيار فيديو أولاً!"
