@@ -1,17 +1,72 @@
-name: Build iOS App
+name: Build iOS IPA
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  build-ipa:
+    name: Build iOS App and generate IPA
+    runs-on: macos-14
 
-      - name: Build Project
-        run: |
-          swift build
-          echo "تم فحص وبناء الكود بنجاح سحابياً!"
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: '15.2'
+
+    - name: Compile Real App and Generate Valid IPA
+      run: |
+        set -e
+        mkdir -p build/Payload/WhiteStudio.app
+
+        echo "Compiling WhiteStudio sources with SwiftUI and AVKit frameworks..."
+        xcrun -sdk iphoneos swiftc \
+          -target arm64-apple-ios16.0 \
+          -swift-version 5 \
+          -parse-as-library \
+          -emit-executable \
+          -framework SwiftUI \
+          -framework AVKit \
+          -framework PhotosUI \
+          -framework AVFoundation \
+          -framework Foundation \
+          -framework UIKit \
+          -o build/Payload/WhiteStudio.app/WhiteStudio \
+          WhiteStudio/*.swift
+
+        PLIST_CONTENT='<?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+        <plist version=\"1.0\">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>WhiteStudio</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.whitestudio.app</string>
+            <key>CFBundleName</key>
+            <string>WhiteStudio</string>
+            <key>CFBundleDisplayName</key>
+            <string>White Studio</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>MinimumOSVersion</key>
+            <string>16.0</string>
+            <key>UIRequiredDeviceCapabilities</key>
+            <array>
+                <string>arm64</string>
+            </array>
+        </dict>
+        </plist>'
+
+        printf '%s\n' "$PLIST_CONTENT" > build/Payload/WhiteStudio.app/Info.plist
+
+        chmod +x build/Payload/WhiteStudio.app/WhiteStudio
+        cd build && zip -r WhiteStudio.ipa Payload
